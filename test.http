@@ -1,0 +1,31 @@
+@server=http://localhost:3000
+
+
+###
+GET {{server}}
+
+###
+PUT {{server}}
+content-type: application/json
+
+{
+    "parameter": "222223"
+}
+
+
+###
+GET {{server}}/ida?parameter1=111
+
+###
+GET {{server}}/ida.nomnio?parameter1=123
+
+###
+
+
+
+###
+
+DELETE {{server}}?parameter1=123
+
+###
+PUT {{server}}/ida?parameter1=123
