@@ -1,16 +1,52 @@
 @server=http://localhost:3000
+@userId=1b78d184-2f6f-47ef-b78a-a9d143b1d330
+
+
 
 
 ###
-GET {{server}}
+POST {{server}}/messages
 
 ###
-PUT {{server}}
+POST {{server}}/messages
+Authorization: {{userId}}
 content-type: application/json
 
 {
-    "parameter": "222223"
+    "authorId": "222223",
+    "authorName": "223333",
+    "timestamp": "eee",
+    "content" : "iere"
+
 }
+
+
+###
+DELETE {{server}}/messages
+
+###
+GET {{server}}/messages
+
+###
+GET {{server}}/messages
+Authorization: {{userId}}
+
+###
+GET {{server}}/user?id=1de00644-cc97-4103-9f5b-bc2d41756dda
+
+###
+PUT {{server}}/user
+content-type: application/json
+
+{
+    "firstName": "222223",
+    "lastName": "223333"
+
+}
+
+
+###
+DELETE {{server}}/user
 
 
 ###
@@ -19,7 +55,7 @@ GET {{server}}/ida?parameter1=111
 ###
 GET {{server}}/ida.nomnio?parameter1=123
 
-###
+
 
 
 

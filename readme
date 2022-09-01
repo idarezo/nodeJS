@@ -1,0 +1,6 @@
+1. klient pogleda če ima v local stoage ze shranjen ID.
+2. če ima ID kliče getUser na server.Server vrne podatke uporabnika s tem iD-om. Če nima tega uporabnika potem klient sklepa, da ni prijavljen.
+3. Če uporabnik ni prijalvljen gre na page za log in kjer vnese ime in priimek ter u pošlje na server. Server si shrani novega uporabnika v polje data.users in mu kreira ID, ki ga tudi poišlje uporabniku.
+   Uporabnik si shrani svoj ID v local storage.
+
+4.Iz autorizationa pridobi unique ID in potem če obstaja user s tem ID-jom, lahko napise oziroma pošlje sporočilo. Header iz expressa in si izpišem header, ki ima key autorisation. V arrayaju headerjou najdti authorizaton, ki se potem izpiše. 5. Dodaj preverjanje vsebine sporočila pri dodajanju in vrni status 400 če je katerkoli property prazen. Plus dodaj authorization, isto kot pri metodi GET( 41 če ni autorizirano).
