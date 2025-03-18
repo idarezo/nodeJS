@@ -20,26 +20,26 @@ mongoose
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.error("Failed to connect to MongoDB", err));
 
-const privateKey = fs.readFileSync(
-  "C:/Users/991460/Desktop/Diplomska/certifikati/server.key",
-  "utf8"
-);
-const certificate = fs.readFileSync(
-  "C:/Users/991460/Desktop/Diplomska/certifikati/server.crt",
-  "utf8"
-);
+//const privateKey = fs.readFileSync(
+//  "C:/Users/991460/Desktop/Diplomska/certifikati/server.key",
+ // "utf8"
+//);
+//const certificate = fs.readFileSync(
+ // "C:/Users/991460/Desktop/Diplomska/certifikati/server.crt",
+ // "utf8"
+//);
 
-const ca = fs.readFileSync(
-  "C:/Users/991460/Desktop/Diplomska/certifikati/server.crt",
-  "utf8"
-);
+//const ca = fs.readFileSync(
+//  "C:/Users/991460/Desktop/Diplomska/certifikati/server.crt",
+ // "utf8"
+//);
 
-const credentials = {
-  key: privateKey,
-  cert: certificate,
-  ca: ca,
-  passphrase: "r1963b",
-};
+//const credentials = {
+//  key: privateKey,
+  //cert: certificate,
+  //ca: ca,
+  //passphrase: "r1963b",
+//};
 
 const app = express();
 const port = 3000;
@@ -586,8 +586,8 @@ app.get("/", (req, res) => {
   console.log(`Example app listening on port ${port}`);
 });*/
 
-https.createServer(credentials, app).listen(3000, "0.0.0.0", () => {
-  console.log("HTTPS strežnik teče na https://localhost:3000");
+app.listen(3000, "0.0.0.0", () => {
+  console.log("HTTP strežnik teče na http://localhost:3000");
 });
 /*
 CORS zaščita (npr. dovoljenje le določenim domenam),
