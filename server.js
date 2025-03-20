@@ -1,13 +1,15 @@
 const express = require("express");
 const https = require("node:https");
 const path = require("path");
+const ngrok = require("ngrok");
+const cors = require("cors");
 const fs = require("fs");
 const axios = require("axios");
 const { body, validationResult } = require("express-validator");
 const mongoose = require("mongoose");
-const bcrypt = require("bcryptjs");
-const ipRangeCheck = require('ip-range-check');
+const ipRangeCheck = require("ip-range-check");
 
+const bcrypt = require("bcryptjs");
 const rateLimit = require("express-rate-limit");
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
@@ -20,31 +22,20 @@ mongoose
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.error("Failed to connect to MongoDB", err));
 
-//const privateKey = fs.readFileSync(
-//  "C:/Users/991460/Desktop/Diplomska/certifikati/server.key",
- // "utf8"
-//);
-//const certificate = fs.readFileSync(
- // "C:/Users/991460/Desktop/Diplomska/certifikati/server.crt",
- // "utf8"
-//);
-
-//const ca = fs.readFileSync(
-//  "C:/Users/991460/Desktop/Diplomska/certifikati/server.crt",
- // "utf8"
-//);
-
-//const credentials = {
-//  key: privateKey,
-  //cert: certificate,
-  //ca: ca,
-  //passphrase: "r1963b",
-//};
-
 const app = express();
+app.use(
+  cors({
+    origin: "*", // Omogoči vse domene
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+// Nastavi express, da zaupa proxy strežnikom
+app.set("trust proxy", 1);
+
 const port = 3000;
 const bodyParser = require("body-parser");
-const cors = require("cors");
+
 const { v4: uuidv4 } = require("uuid");
 const { response } = require("express");
 const jwtSecret = process.env.JWT_SECRET;
@@ -197,14 +188,9 @@ function checkPermissions(role) {
 }
 
 function updateProfile(newUser, oldUser) {}
-//MiddleWare
+
 app.use(bodyParser.json());
 
-app.use(
-  cors({
-    origin: "*",
-  })
-);
 app.use("/userLogin", loginLimiter);
 app.use("/userRegistracija", loginLimiter);
 app.use(generalLimiter);
@@ -365,7 +351,7 @@ app.delete(
       if (!deletedUser) {
         return res
           .status(404)
-          .json({ success: false, message: "Uporabnik ni bil najden" });
+          .json({ success: false, message: "User not found" });
       }
 
       res.json({ success: true, message: `Uporabnik ${userId} izbrisan` });
@@ -406,7 +392,7 @@ app.get(
   }
 );
 //1. metoda klicana
-app.get("/user", verifyToken, checkPermissions("user"), async (req, res) => {
+app.get("API/user", verifyToken, checkPermissions("user"), async (req, res) => {
   console.log("GET /user called");
 
   const userUuid = req.query.uuid;
@@ -467,10 +453,6 @@ app.post(
 //novi get user
 // delujoca prijava / logIn
 app.post("API/userLogin", async (req, res) => {
-  console.log("POST /userLogin called");
-  console.log("JWT_SECRET:", process.env.JWT_SECRET);
-  console.log(req.body);
-
   const email = req.body.emailValue;
   const pswd = req.body.psw;
 
@@ -586,13 +568,17 @@ app.get("/", (req, res) => {
   console.log(`Example app listening on port ${port}`);
 });*/
 
-app.listen(3000, "0.0.0.0", () => {
-  console.log("HTTP strežnik teče na http://localhost:3000");
+app.listen(port, async () => {
+  console.log(`Lokalni strežnik teče na http://localhost:${port}`);
+
+  try {
+    const url = await ngrok.connect(port);
+    console.log(`Ngrok URL: ${url}`);
+  } catch (err) {
+    console.error("Napaka pri vzpostavljanju ngrok tunela:", err);
+  }
 });
 /*
-CORS zaščita (npr. dovoljenje le določenim domenam),
-Bolje definirane pravice uporabnikov (RBAC - Role Based Access Control).
-Primerjava z realnimi napadi – ali imaš vire o dejanskih varnostnih incidentih povezanih z API-ji? Lahko vključiš primere znanih API ranljivosti iz OWASP poročil.
-API7:2023 - Security Misconfiguration
-Neomejen CORS (*) odpira vrata cross-origin napadom, kjer napadalci lahko berejo podatke iz API-ja brez ustreznega dovoljenja.
-*/
+https.createServer(credentials, app).listen(443, () => {
+  console.log("HTTPS strežnik teče na https://localhost:443");
+});*/
