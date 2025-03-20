@@ -210,7 +210,7 @@ app.use("/userRegistracija", loginLimiter);
 app.use(generalLimiter);
 
 //Pridobivanje slik na podlagi URL naslova
-app.get("/fetchImage", async (req, res) => {
+app.get("API/fetchImage", async (req, res) => {
   const targetUrl = req.query.url;
 
   if (!targetUrl) {
@@ -250,7 +250,7 @@ app.get("/fetchImage", async (req, res) => {
 //Pidobivanje podatkov za prikaz osebnega profila
 
 app.get(
-  "/userInfo",
+  "API/userInfo",
   verifyToken,
   checkPermissions("user"),
   async (req, res) => {
@@ -286,7 +286,7 @@ app.get(
 );
 
 app.put(
-  "/userInfo/:idProfile",
+  "API/userInfo/:idProfile",
   [
     body("firstName").isString().trim().escape(),
     body("lastName").isString().trim().escape(),
@@ -349,7 +349,7 @@ app.put(
 
 //Končna točka namenjena administratorju
 app.delete(
-  "/usersDelete/:id",
+  "API/usersDelete/:id",
   verifyToken,
   checkPermissions("admin"),
   async (req, res) => {
@@ -380,7 +380,7 @@ app.delete(
 
 //Pridobitev uporabnikov iz baze
 app.get(
-  "/allUsers",
+  "API/allUsers",
   verifyToken,
   checkPermissions("admin"),
   async (req, res) => {
@@ -433,7 +433,7 @@ app.get("/user", verifyToken, checkPermissions("user"), async (req, res) => {
 //Dodajanje sporocil
 //uspesno dodajanje sporocil na bazo
 app.post(
-  "/postMessage",
+  "API/postMessage",
   verifyToken,
   checkPermissions("user"),
   async (req, res) => {
@@ -466,7 +466,7 @@ app.post(
 
 //novi get user
 // delujoca prijava / logIn
-app.post("/userLogin", async (req, res) => {
+app.post("API/userLogin", async (req, res) => {
   console.log("POST /userLogin called");
   console.log("JWT_SECRET:", process.env.JWT_SECRET);
   console.log(req.body);
@@ -513,7 +513,7 @@ app.post("/userLogin", async (req, res) => {
 //3. metoda klicana
 // delujoce pridobivanje sporocil
 app.get(
-  "/messages",
+  "API/messages",
   verifyToken,
   checkPermissions("user"),
   async (req, res) => {
@@ -541,7 +541,7 @@ app.get(
 
 //2. metoda klicana
 //uspesna registracija uporabnika
-app.post("/userRegistracija", async (req, res) => {
+app.post("API/userRegistracija", async (req, res) => {
   console.log("POST /userRegistracija called");
   console.log("Received body:", req.body);
 
