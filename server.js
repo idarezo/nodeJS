@@ -225,7 +225,6 @@ app.use(generalLimiter);
 
 //Pridobivanje slik na podlagi URL naslova
 app.get("/API/fetchImage", async (req, res) => {
-app.get("/API/fetchImage", async (req, res) => {
   const targetUrl = req.query.url;
 
   if (!targetUrl) {
@@ -266,7 +265,6 @@ app.get("/API/fetchImage", async (req, res) => {
 
 app.get(
   "/API/userInfo",
-  "/API/userInfo",
   verifyToken,
   checkPermissions("user"),
   async (req, res) => {
@@ -302,7 +300,6 @@ app.get(
 );
 
 app.put(
-  "/API/userInfo/:idProfile",
   "/API/userInfo/:idProfile",
   [
     body("firstName").isString().trim().escape(),
@@ -367,7 +364,6 @@ app.put(
 //Končna točka namenjena administratorju
 app.delete(
   "/API/usersDelete/:id",
-  "/API/usersDelete/:id",
   verifyToken,
   checkPermissions("admin"),
   async (req, res) => {
@@ -384,7 +380,6 @@ app.delete(
         return res
           .status(404)
           .json({ success: false, message: "User not found" });
-          .json({ success: false, message: "User not found" });
       }
 
       res.json({ success: true, message: `Uporabnik ${userId} izbrisan` });
@@ -399,7 +394,6 @@ app.delete(
 
 //Pridobitev uporabnikov iz baze
 app.get(
-  "/API/allUsers",
   "/API/allUsers",
   verifyToken,
   checkPermissions("admin"),
@@ -434,17 +428,11 @@ app.get(
     console.log("GET /user called");
 
     const userUuid = req.query.uuid;
-    const userUuid = req.query.uuid;
 
     if (!userUuid) {
       return res.status(400).send("User UUID required");
     }
-    if (!userUuid) {
-      return res.status(400).send("User UUID required");
-    }
 
-    try {
-      const user = await User.findOne({ uuid: userUuid });
     try {
       const user = await User.findOne({ uuid: userUuid });
 
@@ -456,19 +444,7 @@ app.get(
       }
     } catch (err) {
       console.error("Error retrieving user:", err);
-      return res.status(500).send("Error retrieving user from the database"); // Catch any other errors
-    }
-  }
-);
-      if (user) {
-        console.log("NAJDENI UPORABNIK");
-        return res.json(user);
-      } else {
-        return res.status(404).send("User not found");
-      }
-    } catch (err) {
-      console.error("Error retrieving user:", err);
-      return res.status(500).send("Error retrieving user from the database"); // Catch any other errors
+      return res.status(500).send("Error retrieving user from the database");
     }
   }
 );
@@ -476,7 +452,6 @@ app.get(
 //Dodajanje sporocil
 //uspesno dodajanje sporocil na bazo
 app.post(
-  "/API/postMessage",
   "/API/postMessage",
   verifyToken,
   checkPermissions("user"),
@@ -510,7 +485,6 @@ app.post(
 
 //novi get user
 // delujoca prijava / logIn
-app.post("/API/userLogin", async (req, res) => {
 app.post("/API/userLogin", async (req, res) => {
   const email = req.body.emailValue;
   const pswd = req.body.psw;
@@ -555,19 +529,14 @@ app.post("/API/userLogin", async (req, res) => {
 // delujoce pridobivanje sporocil
 app.get(
   "/API/messages",
-  "/API/messages",
   verifyToken,
   checkPermissions("user"),
   async (req, res) => {
     console.log("GET /messages called");
-    console.log("GET /messages TESSST called");
-
-    const idFromAuthorization = checkAuthorizationHeader(req);
 
     try {
       const messages = await Message.find();
       if (messages.length > 0) {
-        console.log();
         return res.json(messages);
       } else {
         return res.status(404).send("No messages found");
@@ -576,14 +545,11 @@ app.get(
       console.error("Error fetching messages:", error);
       return res.status(500).send("Internal server error");
     }
-
-    res.status(401).send("Authorization required");
   }
 );
 
 //2. metoda klicana
 //uspesna registracija uporabnika
-app.post("/API/userRegistracija", async (req, res) => {
 app.post("/API/userRegistracija", async (req, res) => {
   console.log("POST /userRegistracija called");
   console.log("Received body:", req.body);
