@@ -1,10 +1,17 @@
 const express = require("express");
+
+const { z } = require("zod");
 const https = require("node:https");
 const path = require("path");
+const validator = require("validator");
+const ngrok = require("ngrok");
+const cors = require("cors");
 const fs = require("fs");
 const axios = require("axios");
 const { body, validationResult } = require("express-validator");
 const mongoose = require("mongoose");
+const ipRangeCheck = require("ip-range-check");
+
 const bcrypt = require("bcryptjs");
 const rateLimit = require("express-rate-limit");
 require("dotenv").config();
@@ -18,35 +25,43 @@ mongoose
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.error("Failed to connect to MongoDB", err));
 
-const privateKey = fs.readFileSync(
-  "C:/Users/991460/Desktop/Diplomska/certifikati/server.key",
-  "utf8"
-);
-const certificate = fs.readFileSync(
-  "C:/Users/991460/Desktop/Diplomska/certifikati/server.crt",
-  "utf8"
-);
-
-const ca = fs.readFileSync(
-  "C:/Users/991460/Desktop/Diplomska/certifikati/server.crt",
-  "utf8"
-);
-
-const credentials = {
-  key: privateKey,
-  cert: certificate,
-  ca: ca,
-  passphrase: "r1963b",
-};
-
 const app = express();
+app.use(
+  cors({
+    origin: "*", // Omogoči vse domene
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+// Nastavi express, da zaupa proxy strežnikom
+//app.set("trust proxy", 1);
+
 const port = 3000;
 const bodyParser = require("body-parser");
-const cors = require("cors");
+
 const { v4: uuidv4 } = require("uuid");
 const { response } = require("express");
 const jwtSecret = process.env.JWT_SECRET;
 
+//Uporablja se za validacijo strukturo vrnjene iz zunanjih API - jev
+const booleanTextSchema = z.object({
+  value: z.boolean().nullable(),
+  text: z.string(),
+});
+
+const emailValidationResponseSchema = z.object({
+  email: z.string().email(),
+  autocorrect: z.string(),
+  deliverability: z.enum(["DELIVERABLE", "UNDELIVERABLE", "RISKY", "UNKNOWN"]),
+  quality_score: z.string().regex(/^\d\.\d{2}$/), // npr. "0.60"
+  is_valid_format: booleanTextSchema,
+  is_free_email: booleanTextSchema,
+  is_disposable_email: booleanTextSchema,
+  is_role_email: booleanTextSchema,
+  is_catchall_email: booleanTextSchema,
+  is_mx_found: booleanTextSchema,
+  is_smtp_valid: booleanTextSchema,
+});
 //Sheme podatkov na bazi
 const userSchema = new mongoose.Schema({
   uuid: { type: String, required: true, unique: true },
@@ -131,7 +146,7 @@ function generateToken(user) {
 //Funkcije za preverjanje zetonov
 function verifyToken(req, res, next) {
   const token = req.headers.authorization?.split(" ")[1];
-  console.log("Authorization header token trimmed:", token);
+  //console.log("Authorization header token trimmed:", token);
 
   if (!token) {
     return res.status(401).json({ message: "Authorization token required" });
@@ -140,6 +155,8 @@ function verifyToken(req, res, next) {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
+    console.log("TEST");
+
     next();
   } catch (err) {
     console.log("ERROR");
@@ -171,12 +188,12 @@ function checkRoleUser() {
 
 const permissions = {
   user: [
-    "GET:/userInfo",
-    "PUT:/userInfo",
-    "GET:/messages",
-    "POST:/postMessage",
+    "GET:/API/userInfo",
+    "PUT:/API/userInfo",
+    "GET:/API/messages",
+    "POST:/API/postMessage",
   ],
-  admin: ["GET:/allUsers", "DELETE:/usersDelete", "GET:/messages"],
+  admin: ["GET:/API/allUsers", "DELETE:/API/usersDelete", "GET:/API/messages"],
 };
 
 function hasPermission(role, method, path) {
@@ -186,29 +203,28 @@ function hasPermission(role, method, path) {
 
 function checkPermissions(role) {
   return (req, res, next) => {
+    console.log("iscem" + role, req.method, req.path);
     if (hasPermission(role, req.method, req.path)) {
+      console.log("Has permission");
       next();
     } else {
+      console.log("Doesn't have permission");
+
       return res.status(403).json({ message: "Access denied" });
     }
   };
 }
 
 function updateProfile(newUser, oldUser) {}
-//MiddleWare
+
 app.use(bodyParser.json());
 
-app.use(
-  cors({
-    origin: "*",
-  })
-);
 app.use("/userLogin", loginLimiter);
 app.use("/userRegistracija", loginLimiter);
 app.use(generalLimiter);
 
 //Pridobivanje slik na podlagi URL naslova
-app.get("/fetchImage", async (req, res) => {
+app.get("/API/fetchImage", async (req, res) => {
   const targetUrl = req.query.url;
 
   if (!targetUrl) {
@@ -248,7 +264,7 @@ app.get("/fetchImage", async (req, res) => {
 //Pidobivanje podatkov za prikaz osebnega profila
 
 app.get(
-  "/userInfo",
+  "/API/userInfo",
   verifyToken,
   checkPermissions("user"),
   async (req, res) => {
@@ -284,7 +300,7 @@ app.get(
 );
 
 app.put(
-  "/userInfo/:idProfile",
+  "/API/userInfo/:idProfile",
   [
     body("firstName").isString().trim().escape(),
     body("lastName").isString().trim().escape(),
@@ -347,7 +363,7 @@ app.put(
 
 //Končna točka namenjena administratorju
 app.delete(
-  "/usersDelete/:id",
+  "/API/usersDelete/:id",
   verifyToken,
   checkPermissions("admin"),
   async (req, res) => {
@@ -363,7 +379,7 @@ app.delete(
       if (!deletedUser) {
         return res
           .status(404)
-          .json({ success: false, message: "Uporabnik ni bil najden" });
+          .json({ success: false, message: "User not found" });
       }
 
       res.json({ success: true, message: `Uporabnik ${userId} izbrisan` });
@@ -378,7 +394,7 @@ app.delete(
 
 //Pridobitev uporabnikov iz baze
 app.get(
-  "/allUsers",
+  "/API/allUsers",
   verifyToken,
   checkPermissions("admin"),
   async (req, res) => {
@@ -404,34 +420,39 @@ app.get(
   }
 );
 //1. metoda klicana
-app.get("/user", verifyToken, checkPermissions("user"), async (req, res) => {
-  console.log("GET /user called");
+app.get(
+  "/API/user",
+  verifyToken,
+  checkPermissions("user"),
+  async (req, res) => {
+    console.log("GET /user called");
 
-  const userUuid = req.query.uuid;
+    const userUuid = req.query.uuid;
 
-  if (!userUuid) {
-    return res.status(400).send("User UUID required");
-  }
-
-  try {
-    const user = await User.findOne({ uuid: userUuid });
-
-    if (user) {
-      console.log("NAJDENI UPORABNIK");
-      return res.json(user);
-    } else {
-      return res.status(404).send("User not found");
+    if (!userUuid) {
+      return res.status(400).send("User UUID required");
     }
-  } catch (err) {
-    console.error("Error retrieving user:", err);
-    return res.status(500).send("Error retrieving user from the database"); // Catch any other errors
+
+    try {
+      const user = await User.findOne({ uuid: userUuid });
+
+      if (user) {
+        console.log("NAJDENI UPORABNIK");
+        return res.json(user);
+      } else {
+        return res.status(404).send("User not found");
+      }
+    } catch (err) {
+      console.error("Error retrieving user:", err);
+      return res.status(500).send("Error retrieving user from the database"); // Catch any other errors
+    }
   }
-});
+);
 
 //Dodajanje sporocil
 //uspesno dodajanje sporocil na bazo
 app.post(
-  "/postMessage",
+  "/API/postMessage",
   verifyToken,
   checkPermissions("user"),
   async (req, res) => {
@@ -464,11 +485,7 @@ app.post(
 
 //novi get user
 // delujoca prijava / logIn
-app.post("/userLogin", async (req, res) => {
-  console.log("POST /userLogin called");
-  console.log("JWT_SECRET:", process.env.JWT_SECRET);
-  console.log(req.body);
-
+app.post("/API/userLogin", async (req, res) => {
   const email = req.body.emailValue;
   const pswd = req.body.psw;
 
@@ -511,26 +528,26 @@ app.post("/userLogin", async (req, res) => {
 //3. metoda klicana
 // delujoce pridobivanje sporocil
 app.get(
-  "/messages",
+  "/API/messages",
   verifyToken,
   checkPermissions("user"),
   async (req, res) => {
     console.log("GET /messages called");
+    console.log("GET /messages TESSST called");
+
     const idFromAuthorization = checkAuthorizationHeader(req);
 
-    if (idFromAuthorization) {
-      try {
-        const messages = await Message.find();
-        if (messages.length > 0) {
-          console.log();
-          return res.json(messages);
-        } else {
-          return res.status(404).send("No messages found");
-        }
-      } catch (error) {
-        console.error("Error fetching messages:", error);
-        return res.status(500).send("Internal server error");
+    try {
+      const messages = await Message.find();
+      if (messages.length > 0) {
+        console.log();
+        return res.json(messages);
+      } else {
+        return res.status(404).send("No messages found");
       }
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+      return res.status(500).send("Internal server error");
     }
 
     res.status(401).send("Authorization required");
@@ -539,7 +556,7 @@ app.get(
 
 //2. metoda klicana
 //uspesna registracija uporabnika
-app.post("/userRegistracija", async (req, res) => {
+app.post("/API/userRegistracija", async (req, res) => {
   console.log("POST /userRegistracija called");
   console.log("Received body:", req.body);
 
@@ -547,33 +564,84 @@ app.post("/userRegistracija", async (req, res) => {
   const hashedPassword = await bcrypt.hash(req.body.psw, salt);
 
   try {
-    const newUser = new User({
-      uuid: uuidv4(),
-      firstName: req.body.firstName,
-      lastName: req.body.lastName,
-      email: req.body.emailValue,
-      password: hashedPassword,
-      phoneNumber: req.body.rojstniDan,
-      gender: req.body.genderValue,
-    });
+    if (!validator.isEmail(req.body.emailValue)) {
+      return res.status(400).send("Email is not valid");
+    }
+    const apiKey = process.env.ABSTRACT_API_KEY;
+    console.log("API key:", apiKey);
+    const responseValidEmail = await axios.get(
+      `https://emailvalidation.abstractapi.com/v1/?api_key=${apiKey}&email=${req.body.emailValue}`,
+      { timeout: 5000 }
+    );
+    if (responseValidEmail.status !== 200) {
+      console.error(
+        "Email validation API returned an error:",
+        responseValidEmail.status
+      );
+      return res
+        .status(400)
+        .json({ success: false, message: "Failed to validate email" });
+    }
 
-    const existingUser = await User.findOne({ email: req.body.emailValue });
+    const result = emailValidationResponseSchema.safeParse(
+      responseValidEmail.data
+    );
+    const parsedData = result.data;
+    if (!result.success) {
+      console.error("Napaka pri validaciji:", result.error.format());
+      return res
+        .status(404)
+        .send("Email structure is not valid - zod library.");
+    }
+    const validEmail = parsedData.email;
+    if (req.body.emailValue !== validEmail) {
+      return res.status(400).json({
+        success: false,
+        message: "Not matching email from API and from user.",
+      });
+    }
+    if (
+      parsedData.deliverability !== "DELIVERABLE" ||
+      parsedData.is_disposable_email?.value === true ||
+      parsedData.is_role_email?.value === true ||
+      parsedData.is_valid_format?.value !== true ||
+      parsedData.is_mx_found?.value !== true ||
+      parsedData.is_smtp_valid?.value !== true
+    ) {
+      console.log("Invalid email address");
+      return res.status(400).json({ success: false, message: "Invalid email" });
+    }
+    const existingUser = await User.findOne({ email: validEmail });
     if (existingUser) {
       return res
         .status(409)
         .send("User with this email already exists. Enter different email");
-    } else {
-      await newUser.save(); // Shrani uporabnika v MongoDB
-      res.json({
-        success: true,
-        message: "Login successful",
-        newUser,
-      });
-      // res.send(newUser);
     }
+
+    const newUser = new User({
+      uuid: uuidv4(),
+      firstName: req.body.firstName,
+      lastName: req.body.lastName,
+      email: validEmail,
+      password: hashedPassword,
+      phoneNumber: req.body.rojstniDan,
+      gender: req.body.genderValue,
+    });
+    await newUser.save(); // Save the user only if the email is valid
+    return res.json({
+      success: true,
+      message: "Registration successful",
+      newUser,
+    });
   } catch (err) {
+    if (err.code === "ECONNABORTED") {
+      console.error("Email validation API request timed out");
+      return res
+        .status(504)
+        .json({ success: false, message: "Email validation timed out" });
+    }
     console.error("Error saving user:", err);
-    res.status(500).send("Error saving user to the database");
+    return res.status(500).send("Error saving user to the database");
   }
 });
 app.get("/", (req, res) => {
@@ -584,13 +652,10 @@ app.get("/", (req, res) => {
   console.log(`Example app listening on port ${port}`);
 });*/
 
-https.createServer(credentials, app).listen(3000, "0.0.0.0", () => {
-  console.log("HTTPS strežnik teče na https://localhost:3000");
+app.listen(port, async () => {
+  console.log(`Lokalni strežnik teče na http://localhost:${port}`);
 });
 /*
-CORS zaščita (npr. dovoljenje le določenim domenam),
-Bolje definirane pravice uporabnikov (RBAC - Role Based Access Control).
-Primerjava z realnimi napadi – ali imaš vire o dejanskih varnostnih incidentih povezanih z API-ji? Lahko vključiš primere znanih API ranljivosti iz OWASP poročil.
-API7:2023 - Security Misconfiguration
-Neomejen CORS (*) odpira vrata cross-origin napadom, kjer napadalci lahko berejo podatke iz API-ja brez ustreznega dovoljenja.
-*/
+https.createServer(credentials, app).listen(443, () => {
+  console.log("HTTPS strežnik teče na https://localhost:443");
+});*/
