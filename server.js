@@ -225,6 +225,7 @@ app.use(generalLimiter);
 
 //Pridobivanje slik na podlagi URL naslova
 app.get("/API/fetchImage", async (req, res) => {
+app.get("/API/fetchImage", async (req, res) => {
   const targetUrl = req.query.url;
 
   if (!targetUrl) {
@@ -265,6 +266,7 @@ app.get("/API/fetchImage", async (req, res) => {
 
 app.get(
   "/API/userInfo",
+  "/API/userInfo",
   verifyToken,
   checkPermissions("user"),
   async (req, res) => {
@@ -300,6 +302,7 @@ app.get(
 );
 
 app.put(
+  "/API/userInfo/:idProfile",
   "/API/userInfo/:idProfile",
   [
     body("firstName").isString().trim().escape(),
@@ -364,6 +367,7 @@ app.put(
 //Končna točka namenjena administratorju
 app.delete(
   "/API/usersDelete/:id",
+  "/API/usersDelete/:id",
   verifyToken,
   checkPermissions("admin"),
   async (req, res) => {
@@ -380,6 +384,7 @@ app.delete(
         return res
           .status(404)
           .json({ success: false, message: "User not found" });
+          .json({ success: false, message: "User not found" });
       }
 
       res.json({ success: true, message: `Uporabnik ${userId} izbrisan` });
@@ -394,6 +399,7 @@ app.delete(
 
 //Pridobitev uporabnikov iz baze
 app.get(
+  "/API/allUsers",
   "/API/allUsers",
   verifyToken,
   checkPermissions("admin"),
@@ -428,14 +434,32 @@ app.get(
     console.log("GET /user called");
 
     const userUuid = req.query.uuid;
+    const userUuid = req.query.uuid;
 
+    if (!userUuid) {
+      return res.status(400).send("User UUID required");
+    }
     if (!userUuid) {
       return res.status(400).send("User UUID required");
     }
 
     try {
       const user = await User.findOne({ uuid: userUuid });
+    try {
+      const user = await User.findOne({ uuid: userUuid });
 
+      if (user) {
+        console.log("NAJDENI UPORABNIK");
+        return res.json(user);
+      } else {
+        return res.status(404).send("User not found");
+      }
+    } catch (err) {
+      console.error("Error retrieving user:", err);
+      return res.status(500).send("Error retrieving user from the database"); // Catch any other errors
+    }
+  }
+);
       if (user) {
         console.log("NAJDENI UPORABNIK");
         return res.json(user);
@@ -452,6 +476,7 @@ app.get(
 //Dodajanje sporocil
 //uspesno dodajanje sporocil na bazo
 app.post(
+  "/API/postMessage",
   "/API/postMessage",
   verifyToken,
   checkPermissions("user"),
@@ -485,6 +510,7 @@ app.post(
 
 //novi get user
 // delujoca prijava / logIn
+app.post("/API/userLogin", async (req, res) => {
 app.post("/API/userLogin", async (req, res) => {
   const email = req.body.emailValue;
   const pswd = req.body.psw;
@@ -529,6 +555,7 @@ app.post("/API/userLogin", async (req, res) => {
 // delujoce pridobivanje sporocil
 app.get(
   "/API/messages",
+  "/API/messages",
   verifyToken,
   checkPermissions("user"),
   async (req, res) => {
@@ -556,6 +583,7 @@ app.get(
 
 //2. metoda klicana
 //uspesna registracija uporabnika
+app.post("/API/userRegistracija", async (req, res) => {
 app.post("/API/userRegistracija", async (req, res) => {
   console.log("POST /userRegistracija called");
   console.log("Received body:", req.body);
